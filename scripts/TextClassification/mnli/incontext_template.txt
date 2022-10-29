@@ -1,0 +1,1 @@
+Given the two sentences: (1) {"placeholder": "text_a"}. (2) {"placeholder": "text_b"}. What is the relationship between the first sentence and the second ? {"mask"}.

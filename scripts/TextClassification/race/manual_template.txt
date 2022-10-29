@@ -1,0 +1,1 @@
+ I'm taking a test and have to guess the right answer to the question after the article.\n{"placeholder": "text_a"}.\n{"placeholder": "text_b"}|||\nThe answer is {"mask"}.

@@ -1,0 +1,1 @@
+Sentence: {"placeholder": "text_a"} The predicted toxicity is {"placeholder": "text_b"} . Is the prediction True or False ? It's {"mask"} .

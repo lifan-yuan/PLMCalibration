@@ -1,0 +1,1 @@
+ {"placeholder": "text_a"}. Based on that, my rating is {"mask"}

@@ -1,0 +1,10 @@
+society
+science
+health
+education
+computers
+sports
+business
+entertainment
+relationships
+politics
