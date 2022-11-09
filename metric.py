@@ -22,15 +22,15 @@ def ece_equal_mass(allprobs, allpreds, alllabels):
     data = sorted(data)
     allprobs, allpreds, alllabels = zip(*data)
     bin_num = 100
-    num_samples_per_bin = math.ceil(len(flags) / bin_num)
+    num_samples_per_bin = math.ceil(len(alllabels) / bin_num)
     for i, (prob, pred, label) in enumerate(zip(allprobs, allpreds, alllabels)):
             bin = int(i / num_samples_per_bin)
             probs_of_bins[bin].append(prob)
             preds_of_bins[bin].append(pred)
             labels_of_bins[bin].append(label)
- 
+
     ECE = 0
-    for bin in range(1,11):
+    for bin in range(100):
         probs = probs_of_bins[bin]
         preds = preds_of_bins[bin]
         labels = labels_of_bins[bin]
@@ -38,7 +38,7 @@ def ece_equal_mass(allprobs, allpreds, alllabels):
         bin_acc = sum([int(i==j) for i,j in zip(preds, labels)]) / len(probs) if len(probs) != 0 else 0
         ECE += abs(bin_acc-avg_probs) * len(probs)
     
-    return ECE
+    return ECE / len(allprobs)
 
 
 def ece_equal_interval(allprobs, allpreds, alllabels):
@@ -68,7 +68,7 @@ def ece_equal_interval(allprobs, allpreds, alllabels):
         bin_acc = sum([int(i==j) for i,j in zip(preds, labels)]) / len(probs) if len(probs) != 0 else 0
         ECE += abs(bin_acc-avg_probs) * len(probs)
     
-    return ECE
+    return ECE / len(allprobs)
 
 
 
@@ -99,12 +99,12 @@ def compute_ece(allprobs_list, allpreds_list, alllabels_list):
         ECE_equal_mass_subset_list[0].append(np.mean([prob for (prob, pred, label) in zip(allprobs, allpreds, alllabels) if pred != label]))
         ECE_equal_mass_subset_list[1].append(1-np.mean([prob for (prob, pred, label) in zip(allprobs, allpreds, alllabels) if pred == label]))
         ECE_equal_mass = ece_equal_mass(allprobs, allpreds, alllabels)
-        ECE_equal_mass_list.append(ECE_equal_mass[0])
+        ECE_equal_mass_list.append(ECE_equal_mass)
 
         ECE_equal_interval_subset_list[0].append(np.mean([prob for (prob, pred, label) in zip(allprobs, allpreds, alllabels) if pred != label]))
         ECE_equal_interval_subset_list[1].append(1-np.mean([prob for (prob, pred, label) in zip(allprobs, allpreds, alllabels) if pred == label]))
         ECE_equal_interval = ece_equal_interval(allprobs, allpreds, alllabels)
-        ECE_equal_interval_list.append(ECE_equal_interval[0])
+        ECE_equal_interval_list.append(ECE_equal_interval)
 
 
     avg_ECE_equal_mass_subset = {0: np.mean(ECE_equal_mass_subset_list[0]),1: np.mean(ECE_equal_mass_subset_list[1])}
@@ -141,7 +141,7 @@ def compute_ece(allprobs_list, allpreds_list, alllabels_list):
     print()
 
     
-    with open(f"./results/metrics/{setting}/{dataset_name}/{model_name}.tsv", "a") as f:
+    with open(f"./metrics/{setting}/{dataset_name}/{model_name}.tsv", "a") as f:
         print("{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}".format(
                                                     avg_acc, avg_probs, abs(avg_acc - avg_probs),
                                                     avg_ECE_equal_mass, avg_ECE_equal_mass_subset[1], avg_ECE_equal_mass_subset[0],
@@ -154,7 +154,7 @@ def compute_ece(allprobs_list, allpreds_list, alllabels_list):
 
 
 def shots():
-    for shot in for shots in [2**i for i in range(25)]:
+    for shot in [2**i for i in range(25)]:
         if not os.path.exists(f"./results/shots/{dataset_name}/{model_name}/{shot}-shots"):
             continue
         allprobs_list = []
@@ -246,14 +246,14 @@ def ood():
     }
 
     if model_name in ["t5-base-small", "t5-base-middle", "t5-small-middle", "t5-large-middle"]:
-        method_list = ["feature-based", "verbalized", "verbalized-self", "verbalized-iterative", "verbalized-multitask"]
+        method_list = ["E-MLP", "E-PLM", "I-PLM", "I-iterative", "I-multitask"]
     else:
-        method_list = ["None", "temperature_scaling", "label_smoothing", "eda", "ensemble",
-                        "feature-based", "verbalized", "verbalized-self", "verbalized-iterative", "verbalized-multitask"]
+        method_list = ["Vanilla", "temperature_scaling", "label_smoothing", "eda", "ensemble",
+                        "E-MLP", "E-PLM", "I-PLM", "I-iterative", "I-multitask"]
 
     for ood_name in OOD_DATASET[dataset_name]:
         for method in method_list:
-            if method in ["feature-based", "verbalized", "verbalized-self", "verbalized-iterative", "verbalized-multitask"]:
+            if method in ["E-MLP", "E-PLM", "I-PLM", "I-iterative", "I-multitask"]:
                 method_no_suffix = method
                 method = method + "-calibration"
             seeds = 1 if method != "ensemble" else 5
@@ -278,7 +278,7 @@ def ood():
             compute_ece(allprobs_list, allpreds_list, alllabels_list)
 
             method = method.strip("-calibration")
-            if method in ["feature-based", "verbalized", "verbalized-self", "verbalized-iterative", "verbalized-multitask"]:
+            if method in ["E-MLP", "E-PLM", "I-PLM", "I-iterative", "I-multitask"]:
                 if dataset_name == "dynasent":
                     continue
                 acc_list = []
@@ -290,14 +290,14 @@ def ood():
                 print("\n"*3)
 
                 # re-write the acc
-                with open(f"./results/metrics/ood/{dataset_name}/{model_name}.tsv", "r") as f:
+                with open(f"./metrics/ood/{dataset_name}/{model_name}.tsv", "r") as f:
                     data = []
                     lines = f.readlines()
                     for line in lines:
                         line = line.strip().split("\t")
                         data.append(line)
                     data[-1][0] = str(avg_acc)
-                with open(f"./results/metrics/ood/{dataset_name}/{model_name}.tsv", "w") as f:
+                with open(f"./metrics/ood/{dataset_name}/{model_name}.tsv", "w") as f:
                     for line in data:
                         print("\t".join(line), file=f)
 
@@ -311,9 +311,9 @@ def entropy():
     with open(f"./results/metrics/ood/{dataset_name}/entropy/{model_name}.tsv", "w") as f:
         f.write("method\tavg_prob\tavg_entropy\n")
         for ood_dataset in OOD_DATASET[dataset_name]:
-            for method in ["None", "temperature_scaling", "label_smoothing", "eda", "ensemble",
-                            "feature-based", "verbalized", "verbalized-self", "verbalized-iterative", "verbalized-multitask"]:
-                if method in ["feature-based", "verbalized", "verbalized-self", "verbalized-iterative", "verbalized-multitask"]:
+            for method in ["Vanilla", "temperature_scaling", "label_smoothing", "eda", "ensemble",
+                            "E-MLP", "E-PLM", "I-PLM", "I-iterative", "I-multitask"]:
+                if method in ["E-MLP", "E-PLM", "I-PLM", "I-iterative", "I-multitask"]:
                     method = method + "-calibration"
 
                 seeds = 1 if method != "ensemble" else 5
@@ -369,7 +369,7 @@ if __name__ == "__main__":
                 os.makedirs(result_path, exist_ok=True)
                 if setting != "entropy":
                     with open(os.path.join(result_path, f"{model_name}.tsv"), "w") as f:
-                        print("acc\tavg_probs\t|avg_acc-avg_prob|\tECE\tECE on True\tECE on False\tECE_mass\tECE_mass on True\tECE_mass on False\tstd_acc\tstd__probs\t|std_acc-std_prob|\tstd_ECE\tstd_ECE on True\tstd_ECE on False\tstd_ECE_mass\tstd_ECE_mass on True\tstd_ECE_mass on False", file=f)
+                        print("acc\tavg_probs\t|avg_acc-avg_prob|\tECE_mass\tECE_mass on True\tECE_mass on False\tECE_interval\tECE_interval on True\tECE_interval on False\tstd_acc\tstd__probs\t|std_acc-std_prob|\tstd_ECE_mass\tstd_ECE_mass on True\tstd_ECE_mass on False\tstd_ECE_interval\tstd_ECE_interval on True\tstd_ECE_interval on False", file=f)
                 COMPUTE[setting]()
 
                 

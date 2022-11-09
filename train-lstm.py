@@ -82,6 +82,9 @@ def main(args):
                                                 num_training_steps=(warm_up_epochs+epochs) * train_length)
 
     # train
+    
+    prompt_model.train()
+    
     for epoch in range(epochs):
         tot_loss = 0
         for step, batch in enumerate(train_dataloader):
@@ -97,6 +100,9 @@ def main(args):
                 print("Epoch {}, average loss: {}".format(epoch, tot_loss/(step+1)), flush=True)
 
     # test
+
+    prompt_model.eval()
+    
     allprobs = []
     allpreds = []
     alllabels = []

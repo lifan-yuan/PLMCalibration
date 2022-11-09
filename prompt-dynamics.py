@@ -57,6 +57,9 @@ def set_seed(seed):
 
 
 def evaluate(test_dataloader, tokenizer, prompt_model, dataset_name, model_name, accumulated_step):
+
+    prompt_model.eval()
+
     allprobs = []
     allpreds = []
     alllabels = []
@@ -74,6 +77,8 @@ def evaluate(test_dataloader, tokenizer, prompt_model, dataset_name, model_name,
     np.save(f"./results/dynamics/{dataset_name}/{model_name}/{accumulated_step}/alllabels.npy", alllabels)
     np.save(f"./results/dynamics/{dataset_name}/{model_name}/{accumulated_step}/allprobs.npy", allprobs)
     np.save(f"./results/dynamics/{dataset_name}/{model_name}/{accumulated_step}/allpreds.npy", allpreds)
+
+    prompt_model.train()
 
     return allprobs, allpreds, alllabels
 
@@ -121,6 +126,8 @@ def main(args):
     ]
 
     optimizer = torch.optim.AdamW(optimizer_grouped_parameters, lr=1e-5)
+
+    prompt_model.train()
 
     for epoch in range(10):
         tot_loss = 0

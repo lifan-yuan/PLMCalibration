@@ -18,7 +18,7 @@ from openprompt import PromptDataLoader
 from transformers import T5ForConditionalGeneration, AutoModelForSequenceClassification
 import torch.nn as nn
 import torch.nn.functional as F
-from calibration_methods import *
+from utils.calibration_methods import *
 
 PROCESSER = {
     "sst2": SST2Processor,
@@ -75,6 +75,8 @@ def set_seed(seed):
 
 def evaluation(test_dataloader, prompt_model, dataset_name, model_name, ood_name, method, seed):
 
+    prompt_model.eval()
+
     allprobs = []
     allpreds = []
     alllabels = []
@@ -117,10 +119,15 @@ def evaluation(test_dataloader, prompt_model, dataset_name, model_name, ood_name
     np.save(f"./results/ood/{dataset_name}/{model_name}/{method}/{ood_name}/{seed}/allpreds.npy", allpreds)
     acc = sum([int(i==j) for i,j in zip(allpreds, alllabels)])/len(allpreds)
     print('acc on {}: {}'.format(ood_name, acc))
+
+    prompt_model.train()
+    
     return acc
 
 
 def compute_entropy(test_dataloader, prompt_model, dataset_name, model_name, ood_name, method, seed):
+
+    prompt_model.eval()
 
     allprobs = []
     allentropy = []
@@ -157,6 +164,8 @@ def compute_entropy(test_dataloader, prompt_model, dataset_name, model_name, ood
 
     avg_entropy = np.mean(allentropy)
     print('entropy on {}: {}'.format(ood_name, avg_entropy))
+
+    prompt_model.train()
 
 
 
@@ -379,6 +388,7 @@ def main(args):
         optimizer = torch.optim.AdamW(optimizer_grouped_parameters, lr=1e-5)
 
         loss_func = torch.nn.CrossEntropyLoss() if method != "label_smoothing" else LabelSmoothingLoss(num_classes)
+        prompt_model.train()
         for epoch in range(10):
             tot_loss = 0
             for step, inputs in enumerate(train_dataloader):

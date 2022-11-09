@@ -7,6 +7,7 @@ from transformers import get_linear_schedule_with_warmup
 import random
 from torch.utils.data import DataLoader
 
+import pandas as pd
 from sklearn.svm import SVC
 # from cuml.svm import SVC
 from sklearn.ensemble  import RandomForestClassifier
@@ -43,6 +44,9 @@ def wrap_verbalized_testloader(prompt_model, test_dataloader, testset, calibarti
 
 def compute_hidden(prompt_model, dataloader):
     print("Forwarding")
+
+    prompt_model.eval()
+    
     all_hidden_states = []
     allpreds = []
     alllabels = []
@@ -88,6 +92,8 @@ def compute_hidden(prompt_model, dataloader):
     for hidden_states, pred, label in dataset:
         feature_dataset.append((hidden_states, int(pred==label)))
     
+    prompt_model.train()
+
     return feature_dataset, dim, all_hidden_states, allpreds, alllabels
 
 
@@ -104,6 +110,7 @@ def feature_based(prompt_model, dev_dataloader):
     loss_func = torch.nn.CrossEntropyLoss()
     
     print("Training Calibrater")
+    prompt_model.train()
     for epoch in range(10):
         tot_loss = 0
         for step, batch in enumerate(train_dataloader):
@@ -171,6 +178,9 @@ def verbalized(prompt_model, train_dataloader, dev_dataloader, devset, dataset_n
     optimizer = torch.optim.AdamW(optimizer_grouped_parameters, lr=1e-5)
 
     loss_func = torch.nn.CrossEntropyLoss()
+
+    prompt_model.train()
+
     for epoch in range(10):
         tot_loss = 0
         for step, inputs in enumerate(train_dataloader):
@@ -238,6 +248,9 @@ def verbalized_iterative(prompt_model, train_dataloader, dev_dataloader, devset,
     optimizer = torch.optim.AdamW(optimizer_grouped_parameters, lr=1e-5)
 
     loss_func = torch.nn.CrossEntropyLoss()
+
+    prompt_model.train()
+
     for epoch in range(10):
         tot_loss = 0
 
@@ -334,6 +347,8 @@ def verbalized_multitask(prompt_model, train_dataloader, dev_dataloader, devset,
     calibration_loader = iter(train_dataloader_calibration)
     performance_loader = iter(train_dataloader_performance)
 
+    prompt_model.train()
+
     for epoch in range(10):
         tot_calibration_loss = 0
         tot_performance_loss = 0
@@ -417,6 +432,8 @@ def nll_criterion(output, target, num_classes=3):
 
 
 def temperature_scaling(dev_dataloader, prompt_model):
+
+    prompt_model.eval()
 
     alllogits = []
     alllabels = []
@@ -508,6 +525,8 @@ def temperature_scaling(dev_dataloader, prompt_model):
     # plt.xlabel("step/T")
     # plt.ylabel("T/NLL")
     # plt.savefig("nll.png")
+
+    prompt_model.train()
 
     return best_temp
 
@@ -678,19 +697,15 @@ class EDASST2Processor():
     def get_examples(self, data_dir, split):
         path = os.path.join(data_dir, f"{split}.tsv")
         examples = []
-        with open(path, encoding='utf-8')as f:
-            lines = f.readlines()
-            for idx, line in enumerate(lines[1:]):
-                linelist = line.strip().split('\t')
-                text_a = linelist[0]
-                label = linelist[1]
-
-                try:
-                    augmented_sentences = eda(text_a)
-                except:
-                    print(text_a)
-                for aug_sent in augmented_sentences:
-                    guid = "%s-%s" % (split, idx)
+        data = pd.read_csv(path, sep='\t').values.tolist()
+        examples = []
+        for idx1, item in enumerate(data):
+            if not np.isnan(item[1]):
+                text_a = item[0].strip()
+                label = item[1]
+                augmented_sentences = eda(text_a)
+                for idx2, aug_sent in enumerate(augmented_sentences):
+                    guid = f"{split}-{idx1}-{idx2}"
                     example = InputExample(guid=guid, text_a=aug_sent, label=int(label))
                     examples.append(example)
 
@@ -710,18 +725,16 @@ class EDAMnliProcessor():
         examples = []
         with open(path, encoding='utf8') as f:
             reader = csv.reader(f, delimiter=',')
-            for idx, row in enumerate(reader):
+            for idx1, row in enumerate(reader):
 
                 label, premise, hypothesis = row
-                try:
-                    augmented_sentences = eda(hypothesis)
-                except:
-                    print(hypothesis)
-                for aug_sent in augmented_sentences:
+                augmented_sentences = eda(hypothesis)
+                for idx2, aug_sent in enumerate(augmented_sentences):
+                    guid = f"{split}-{idx1}-{idx2}"
                     text_a = premise.replace('\\', ' ')
                     text_b = aug_sent.replace('\\', ' ')
                     example = InputExample(
-                        guid=str(idx), text_a=text_a, text_b=text_b, label=int(label)-1)
+                        guid=guid, text_a=text_a, text_b=text_b, label=int(label)-1)
                     examples.append(example)
 
         return examples
@@ -737,18 +750,15 @@ class EDAAmazonFoodProcessor():
     def get_examples(self, data_dir, split):
         path = os.path.join(data_dir, f"{split}.tsv")
         examples = []
-        with open(path, encoding='utf-8')as f:
-            lines = f.readlines()
-            for idx, line in enumerate(lines[1:]):
-                linelist = line.strip().split('\t')
-                text_a = linelist[0]
-                label = linelist[1]
-                try:
-                    augmented_sentences = eda(text_a)
-                except:
-                    print(text_a)
-                for aug_sent in augmented_sentences:
-                    guid = "%s-%s" % (split, idx)
+        data = pd.read_csv(path, sep='\t').values.tolist()
+        examples = []
+        for idx1, item in enumerate(data):
+            if not np.isnan(item[1]):
+                text_a = item[0].strip()
+                label = item[1]
+                augmented_sentences = eda(text_a)
+                for idx2, aug_sent in enumerate(augmented_sentences):
+                    guid = f"{split}-{idx1}-{idx2}"
                     example = InputExample(guid=guid, text_a=aug_sent, label=int(label))
                     examples.append(example)
         return examples
@@ -764,21 +774,17 @@ class EDACivilCommentsProcessor():
     def get_examples(self, data_dir, split):
         path = os.path.join(data_dir, f"{split}.tsv")
         examples = []
-        with open(path, encoding='utf-8')as f:
-            lines = f.readlines()
-            for idx, line in enumerate(lines[1:]):
-                linelist = line.strip().split('\t')
-                try:
-                    text_a = linelist[0]
-                    label = linelist[1]
-                    augmented_sentences = eda(text_a)
-                    for aug_sent in augmented_sentences:
-                        guid = "%s-%s" % (split, idx)
-                        example = InputExample(guid=guid, text_a=aug_sent, label=int(label))
-                        examples.append(example)
-                except:
-                    print(text_a)
-                    continue
+        data = pd.read_csv(path, sep='\t').values.tolist()
+        examples = []
+        for idx1, item in enumerate(data):
+            if not np.isnan(item[1]):
+                text_a = item[0].strip()
+                label = item[1]
+                augmented_sentences = eda(text_a)
+                for idx2, aug_sent in enumerate(augmented_sentences):
+                    guid = f"{split}-{idx1}-{idx2}"
+                    example = InputExample(guid=guid, text_a=aug_sent, label=int(label))
+                    examples.append(example)
                 
         return examples
 
@@ -795,20 +801,17 @@ class EDAYahooProcessor():
         examples = []
         with open(path, encoding='utf8') as f:
             reader = csv.reader(f, delimiter=',')
-            for idx, row in enumerate(reader):
-                if idx == 0: continue
+            for idx1, row in enumerate(reader):
+                if idx1 == 0: continue
                 _, label, question_title, question_body, answer = row
                 text_a = ' '.join([question_title.replace('\\n', ' ').replace('\\', ' '),
                                    question_body.replace('\\n', ' ').replace('\\', ' ')])
                 text_b = answer.replace('\\n', ' ').replace('\\', ' ')
-                if label == "topic":
+                if np.isnan(label):
                     continue
-                try:
-                    augmented_sentences = eda(text_a)
-                except:
-                    print(text_a)
-                for aug_sent in augmented_sentences:
-                    guid = "%s-%s" % (split, idx)
+                augmented_sentences = eda(text_a)
+                for idx2, aug_sent in enumerate(augmented_sentences):
+                    guid = f"{split}-{idx1}-{idx2}"
                     example = InputExample(guid=guid, text_a=aug_sent, text_b=text_b, label=int(label))
                     examples.append(example)
                     

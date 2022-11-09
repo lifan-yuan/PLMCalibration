@@ -101,6 +101,8 @@ def main(args):
 
         optimizer = torch.optim.AdamW(optimizer_grouped_parameters, lr=1e-5)
 
+        prompt_model.train()
+
         for epoch in range(10):
             tot_loss = 0
             for step, inputs in enumerate(train_dataloader):
@@ -116,6 +118,8 @@ def main(args):
                     print("Epoch {}, average loss: {}".format(epoch, tot_loss/(step+1)), flush=True)
     
 
+    prompt_model.eval()
+    
     allprobs = []
     allpreds = []
     alllabels = []

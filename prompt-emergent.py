@@ -75,6 +75,8 @@ def set_seed(seed):
 
 def evaluation(test_dataloader, prompt_model, dataset_name, model_name, ood_name, method, seed):
 
+    prompt_model.eval()
+
     allprobs = []
     allpreds = []
     alllabels = []
@@ -117,10 +119,15 @@ def evaluation(test_dataloader, prompt_model, dataset_name, model_name, ood_name
     np.save(f"./results/ood/{dataset_name}/{model_name}/{method}/{ood_name}/{seed}/allpreds.npy", allpreds)
     acc = sum([int(i==j) for i,j in zip(allpreds, alllabels)])/len(allpreds)
     print('acc on {}: {}'.format(ood_name, acc))
+
+    prompt_model.train()
+
     return acc
 
 
 def compute_entropy(test_dataloader, prompt_model, dataset_name, model_name, ood_name, method, seed):
+
+    prompt_model.eval()
 
     allprobs = []
     allentropy = []
@@ -150,6 +157,8 @@ def compute_entropy(test_dataloader, prompt_model, dataset_name, model_name, ood
             else:
                 allprobs.extend([prob[1].item() for prob in probs])
 
+    prompt_model.train()
+
     # record
     os.makedirs(f"./results/ood/{dataset_name}/{model_name}/{method}/{ood_name}/{seed}", exist_ok=True)
     np.save(f"./results/ood/{dataset_name}/{model_name}/{method}/{ood_name}/{seed}/allprobs.npy", allprobs)
@@ -157,6 +166,9 @@ def compute_entropy(test_dataloader, prompt_model, dataset_name, model_name, ood
 
     avg_entropy = np.mean(allentropy)
     print('entropy on {}: {}'.format(ood_name, avg_entropy))
+
+    
+
 
 
 
