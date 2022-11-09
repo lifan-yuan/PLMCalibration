@@ -52,7 +52,6 @@ def set_seed(seed):
 def main(args):
     num_classes = args.num_classes
     model_name = args.model_name
-    model_path = args.model_path
     dataset_name = args.dataset_name
     dataset_path = args.dataset_path
 
@@ -72,7 +71,7 @@ def main(args):
     from transformers import get_linear_schedule_with_warmup
     loss_func = torch.nn.CrossEntropyLoss()
 
-    ptimizer_grouped_parameters = model.parameters()
+    optimizer_grouped_parameters = model.parameters()
     optimizer = torch.optim.AdamW(optimizer_grouped_parameters, lr=1e-3)
     warm_up_epochs = 3
     epochs = 5
@@ -83,7 +82,7 @@ def main(args):
 
     # train
     
-    prompt_model.train()
+    model.train()
     
     for epoch in range(epochs):
         tot_loss = 0
@@ -101,7 +100,7 @@ def main(args):
 
     # test
 
-    prompt_model.eval()
+    model.eval()
     
     allprobs = []
     allpreds = []
@@ -115,10 +114,10 @@ def main(args):
         allpreds.extend(torch.argmax(logits, dim=-1).cpu().tolist())
 
     # record
-    os.makedirs(f"./results/pretraining/{dataset_name}/{model_name}", exist_ok=True)
-    np.save(f"./results/pretraining/{dataset_name}/{model_name}/alllabels.npy", alllabels)
-    np.save(f"./results/pretraining/{dataset_name}/{model_name}/allprobs.npy", allprobs)
-    np.save(f"./results/pretraining/{dataset_name}/{model_name}/allpreds.npy", allpreds)
+    os.makedirs(f"./results/pretrain/{dataset_name}/{model_name}", exist_ok=True)
+    np.save(f"./results/pretrain/{dataset_name}/{model_name}/alllabels.npy", alllabels)
+    np.save(f"./results/pretrain/{dataset_name}/{model_name}/allprobs.npy", allprobs)
+    np.save(f"./results/pretrain/{dataset_name}/{model_name}/allpreds.npy", allpreds)
     
     acc = sum([int(i==j) for i,j in zip(allpreds, alllabels)])/len(allpreds)
     print('acc:', acc)
@@ -137,7 +136,6 @@ if __name__ == "__main__":
     if args.dataset_name == "yahoo":
         args.dataset_name = "yahoo_answers_topics"
 
-    args.model_path = MODEL_PATH[args.model_name]
     args.dataset_path = DATASET_PATH[args.dataset_name]
 
     args.num_classes = NUM_CLASSES[args.dataset_name]

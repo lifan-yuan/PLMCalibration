@@ -138,15 +138,15 @@ def main(args):
         allpreds.extend(torch.argmax(logits, dim=-1).cpu().tolist())
 
     if method == "adapter":
-        os.makedirs(f"./results/delta-adapter/{dataset_name}/{model_name}/adapter-{bottleneck_dim}-dim/{seed}", exist_ok=True)
-        np.save(f"./results/delta-adapter/{dataset_name}/{model_name}/adapter-{bottleneck_dim}-dim/{seed}/alllabels.npy", alllabels)
-        np.save(f"./results/delta-adapter/{dataset_name}/{model_name}/adapter-{bottleneck_dim}-dim/{seed}/allprobs.npy", allprobs)
-        np.save(f"./results/delta-adapter/{dataset_name}/{model_name}/adapter-{bottleneck_dim}-dim/{seed}/allpreds.npy", allpreds)
+        os.makedirs(f"./results/delta-adapter/{dataset_name}/{model_name}/adapter-{parameter}-dim/{seed}", exist_ok=True)
+        np.save(f"./results/delta-adapter/{dataset_name}/{model_name}/adapter-{parameter}-dim/{seed}/alllabels.npy", alllabels)
+        np.save(f"./results/delta-adapter/{dataset_name}/{model_name}/adapter-{parameter}-dim/{seed}/allprobs.npy", allprobs)
+        np.save(f"./results/delta-adapter/{dataset_name}/{model_name}/adapter-{parameter}-dim/{seed}/allpreds.npy", allpreds)
     elif method == "soft_prompt":
-        os.makedirs(f"./results/delta-soft/{dataset_name}/{model_name}/{soft_token_num}-token/{seed}", exist_ok=True)
-        np.save(f"./results/delta-soft/{dataset_name}/{model_name}/{soft_token_num}-token/{seed}/alllabels.npy", alllabels)
-        np.save(f"./results/delta-soft/{dataset_name}/{model_name}/{soft_token_num}-token/{seed}/allprobs.npy", allprobs)
-        np.save(f"./results/delta-soft/{dataset_name}/{model_name}/{soft_token_num}-token/{seed}/allpreds.npy", allpreds)
+        os.makedirs(f"./results/delta-soft/{dataset_name}/{model_name}/{parameter}-token/{seed}", exist_ok=True)
+        np.save(f"./results/delta-soft/{dataset_name}/{model_name}/{parameter}-token/{seed}/alllabels.npy", alllabels)
+        np.save(f"./results/delta-soft/{dataset_name}/{model_name}/{parameter}-token/{seed}/allprobs.npy", allprobs)
+        np.save(f"./results/delta-soft/{dataset_name}/{model_name}/{parameter}-token/{seed}/allpreds.npy", allpreds)
 
     acc = sum([int(i==j) for i,j in zip(allpreds, alllabels)])/len(allpreds)
     print('acc:', acc)

@@ -86,9 +86,9 @@ if __name__ == "__main__":
     alllabels = test_labels
 
     # save
-    os.makedirs(f"./results/pretraining/{dataset_name}/{model_name}", exist_ok=True)
-    np.save(f"./results/pretraining/{dataset_name}/{model_name}/alllabels.npy", alllabels)
-    np.save(f"./results/pretraining/{dataset_name}/{model_name}/allprobs.npy", allprobs)
-    np.save(f"./results/pretraining/{dataset_name}/{model_name}/allpreds.npy", allpreds)
+    os.makedirs(f"./results/pretrain/{dataset_name}/{model_name}", exist_ok=True)
+    np.save(f"./results/pretrain/{dataset_name}/{model_name}/alllabels.npy", alllabels)
+    np.save(f"./results/pretrain/{dataset_name}/{model_name}/allprobs.npy", allprobs)
+    np.save(f"./results/pretrain/{dataset_name}/{model_name}/allpreds.npy", allpreds)
 
     print("done")

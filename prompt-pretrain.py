@@ -2,8 +2,8 @@ import argparse
 import math
 import os
 from tqdm import tqdm
-from openprompt.data_utils.text_classification_dataset import AmazonFoodProcessor, CivilCommentsProcessor
-from openprompt.data_utils.fewglue_dataset import RteProcessor
+from openprompt.data_utils.text_classification_dataset \
+        import YahooProcessor, SST2Processor, MnliProcessor, AgnewsProcessor
 import torch
 from openprompt.data_utils.utils import InputExample
 from openprompt.plms import load_plm
@@ -16,23 +16,29 @@ from openprompt import PromptDataLoader
 import torch.multiprocessing as mp
 
 PROCESSER = {
-    "amazon_food": AmazonFoodProcessor,
-    "civil_comments": CivilCommentsProcessor,
+    "sst2": SST2Processor,
+    "mnli": MnliProcessor,
+    "agnews": AgnewsProcessor,
+    "yahoo_answers_topics": YahooProcessor,
 }
 
 MODEL_PATH = {
-    "t5": "t5-base",
-    "roberta": "roberta-base",
+    "t5": "./model_cache/t5-base",
+    "roberta": "./model_cache/roberta-base",
 }
 
 DATASET_PATH = {
-    "amazon_food": "./dataset/TextClassification/amazon_food",
-    "civil_comments": "./dataset/TextClassification/civil_comments",
+    "sst2": "./datasets/TextClassification/SST-2",
+    "mnli": "./datasets/TextClassification/mnli",
+    "agnews": "./datasets/TextClassification/agnews",
+    "yahoo_answers_topics": "./datasets/TextClassification/yahoo_answers_topics",
 }
 
 NUM_CLASSES = {
-    "amazon_food": 3,
-    "civil_comments": 2,
+    "sst2": 2,
+    "mnli": 3,
+    "agnews": 4,
+    "yahoo_answers_topics": 10,
 }
 
 

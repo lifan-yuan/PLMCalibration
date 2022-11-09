@@ -23,8 +23,8 @@ PROCESSER = {
 }
 
 MODEL_PATH = {
-    "t5": "t5-base",
-    "roberta": "roberta-base",
+    "t5": "./model_cache/t5-base",
+    "roberta": "./model_cache/roberta-base",
 }
 
 DATASET_PATH = {
@@ -62,12 +62,9 @@ def main(args):
     dataset_name = args.dataset_name
     dataset_path = args.dataset_path
     seed = args.seed
-
-    processer = PROCESSER[dataset_name]()
-    dataset = {}
-    dataset['train'] = processer.get_train_examples(dataset_path)
-    dataset['test'] = processer.get_test_examples(dataset_path)
     
+    global dataset
+
     plm, tokenizer, model_config, WrapperClass = load_plm(model_name.split("-")[0], model_path)
     
     mytemplate = ManualTemplate(tokenizer=tokenizer).from_file(f"scripts/TextClassification/{dataset_name}/manual_template.txt", choice=0)
@@ -159,11 +156,17 @@ if __name__ == "__main__":
     args.num_classes = NUM_CLASSES[args.dataset_name]
 
     
+    processer = PROCESSER[args.dataset_name]()
+    global dataset
+    dataset = {}
+    dataset['train'] = processer.get_train_examples(args.dataset_path)
+    dataset['test'] = processer.get_test_examples(args.dataset_path)
 
-    if repeats == -1:
+    print(f"{len(dataset['train'])=}")
+    if args.repeats == -1:
         for shots in [2**i for i in range(25)]:
-
-            if shots/2 * args.num_classes > len(dataset["train"]):
+            args.shots = shots
+            if shots * args.num_classes > len(dataset["train"]):
                 print("Too much samples!")
                 print("Exit!")
                 exit()
@@ -176,6 +179,11 @@ if __name__ == "__main__":
                 repeats = 3
             else:
                 repeats = 1
+            
+            for i in range(repeats):
+                set_seed(i)
+                args.seed = i
+                main(args)
 
     else:
         repeats = args.repeats
@@ -185,7 +193,7 @@ if __name__ == "__main__":
                 print("Exit!")
                 exit()
 
-    for i in range(repeats):
-            set_seed(i)
-            args.seed = i
-            main(args)
+            for i in range(repeats):
+                set_seed(i)
+                args.seed = i
+                main(args)

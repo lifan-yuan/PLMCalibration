@@ -4,6 +4,7 @@ import abc
 import torch
 from torch.nn.utils.rnn import pad_sequence, pack_padded_sequence
 from collections import namedtuple
+from transformers import BertTokenizer
 
 class Model(nn.Module, metaclass=abc.ABCMeta):
 
