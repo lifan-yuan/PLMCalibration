@@ -142,7 +142,7 @@ class LSTM(Model, metaclass=abc.ABCMeta):
 class LSTMForTwoSeq(LSTM):
     def __init__(self,
                  glove_path=None,
-                 vocab_path="./model_cache/bert-base-uncased/vocab.txt",
+                 vocab_path="./utils/vocab.txt",
                  embed_dim=300,
                  hidden_size=1024,
                  layers=2,
