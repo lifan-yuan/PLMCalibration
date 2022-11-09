@@ -88,7 +88,7 @@ We consider pre-trained PLM, random-initialized PLM, LSTM, BoW, and TF-IDF.
 For PLM, run:
 
 ```sh
-python prompt-pretraining.py --model_name MODEL_NAME --dataset_name DATASET_NAME --mode MODE
+python prompt-pretrain.py --model_name MODEL_NAME --dataset_name DATASET_NAME --mode MODE
 ```
 
 where `MODE` is *pretrain* or *random*.
@@ -105,7 +105,7 @@ For Bow and TF-IDF, run:
 python train-bow-tf_idf.py --model_name MODEL_NAME --dataset_name DATASET_NAME
 ```
 
-All the results will be recorded to `./results/pretraining`.
+All the results will be recorded to `./results/pretrain`.
 
 
 
