@@ -190,7 +190,7 @@ def dynamics():
         compute_ece(allprobs, allpreds, alllabels)
 
 
-def parameter_adapter():
+def delta_adapter():
     seed = 0
     for bottleneck_dim in [1, 4, 16, 64, 256, 1024]:
         if not os.path.exists(f"./results/delta-adapter/{dataset_name}/{model_name}/{bottleneck_dim}-dim/{seed}"):
@@ -202,7 +202,7 @@ def parameter_adapter():
         compute_ece(allprobs, allpreds, alllabels)
 
 
-def parameter_soft():
+def delta_soft():
     seed = 0
     for soft_token_num in [1, 5, 10, 20, 50]:
         
@@ -230,9 +230,9 @@ def scale():
 def pretrain():
     
     for model in [f"{model_name}-pretrain", f"{model_name}-random", "lstm", "tf_idf", "bag_of_words"]:
-        allprobs = np.load(f"./results/pretraining/{dataset_name}/{model}/allprobs.npy").tolist()
-        allpreds = np.load(f"./results/pretraining/{dataset_name}/{model}/allpreds.npy").tolist()
-        alllabels = np.load(f"./results/pretraining/{dataset_name}/{model}/alllabels.npy").tolist()
+        allprobs = np.load(f"./results/pretrain/{dataset_name}/{model}/allprobs.npy").tolist()
+        allpreds = np.load(f"./results/pretrain/{dataset_name}/{model}/allpreds.npy").tolist()
+        alllabels = np.load(f"./results/pretrain/{dataset_name}/{model}/alllabels.npy").tolist()
     
         compute_ece(allprobs, allpreds, alllabels)
 
@@ -307,8 +307,8 @@ def entropy():
         "sst2": ["sst2_iid", "bookcorpus", "random_words"],
         "yahoo_answers_topics": ["yahoo_answers_topics_iid", "bookcorpus", "random_words"]
     }
-    os.makedirs(f"./results/metrics/ood/{dataset_name}/entropy", exist_ok=True)
-    with open(f"./results/metrics/ood/{dataset_name}/entropy/{model_name}.tsv", "w") as f:
+    os.makedirs(f"./metrics/ood/{dataset_name}", exist_ok=True)
+    with open(f"./metrics/ood/{dataset_name}/{model_name}.tsv", "w") as f:
         f.write("method\tavg_prob\tavg_entropy\n")
         for ood_dataset in OOD_DATASET[dataset_name]:
             for method in ["Vanilla", "temperature_scaling", "label_smoothing", "eda", "ensemble",
@@ -336,8 +336,8 @@ def entropy():
 COMPUTE = {
     "shots": shots,
     "dynamics": dynamics,
-    "delta-adapter": parameter_adapter,
-    "delta-soft": parameter_soft,
+    "delta-adapter": delta_adapter,
+    "delta-soft": delta_soft,
     "scale": scale,
     "pretrain": pretrain,
     "ood": ood,
@@ -365,9 +365,9 @@ if __name__ == "__main__":
                 if model_name == "roberta" and setting == "scale":
                     model_name = "bert"
 
-                result_path = f"./metrics/{setting}/{dataset_name}"
-                os.makedirs(result_path, exist_ok=True)
                 if setting != "entropy":
+                    result_path = f"./metrics/{setting}/{dataset_name}"
+                    os.makedirs(result_path, exist_ok=True)
                     with open(os.path.join(result_path, f"{model_name}.tsv"), "w") as f:
                         print("acc\tavg_probs\t|avg_acc-avg_prob|\tECE_mass\tECE_mass on True\tECE_mass on False\tECE_interval\tECE_interval on True\tECE_interval on False\tstd_acc\tstd__probs\t|std_acc-std_prob|\tstd_ECE_mass\tstd_ECE_mass on True\tstd_ECE_mass on False\tstd_ECE_interval\tstd_ECE_interval on True\tstd_ECE_interval on False", file=f)
                 COMPUTE[setting]()

@@ -138,10 +138,10 @@ def main(args):
         allpreds.extend(torch.argmax(logits, dim=-1).cpu().tolist())
 
     if method == "adapter":
-        os.makedirs(f"./results/delta-adapter/{dataset_name}/{model_name}/adapter-{parameter}-dim/{seed}", exist_ok=True)
-        np.save(f"./results/delta-adapter/{dataset_name}/{model_name}/adapter-{parameter}-dim/{seed}/alllabels.npy", alllabels)
-        np.save(f"./results/delta-adapter/{dataset_name}/{model_name}/adapter-{parameter}-dim/{seed}/allprobs.npy", allprobs)
-        np.save(f"./results/delta-adapter/{dataset_name}/{model_name}/adapter-{parameter}-dim/{seed}/allpreds.npy", allpreds)
+        os.makedirs(f"./results/delta-adapter/{dataset_name}/{model_name}/{parameter}-dim/{seed}", exist_ok=True)
+        np.save(f"./results/delta-adapter/{dataset_name}/{model_name}/{parameter}-dim/{seed}/alllabels.npy", alllabels)
+        np.save(f"./results/delta-adapter/{dataset_name}/{model_name}/{parameter}-dim/{seed}/allprobs.npy", allprobs)
+        np.save(f"./results/delta-adapter/{dataset_name}/{model_name}/{parameter}-dim/{seed}/allpreds.npy", allpreds)
     elif method == "soft_prompt":
         os.makedirs(f"./results/delta-soft/{dataset_name}/{model_name}/{parameter}-token/{seed}", exist_ok=True)
         np.save(f"./results/delta-soft/{dataset_name}/{model_name}/{parameter}-token/{seed}/alllabels.npy", alllabels)

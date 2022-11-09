@@ -57,7 +57,7 @@ def vectorize(vectorizer, train_data_features, test_data_features):
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument('--repeats', type=int, default=1)
-    parser.add_argument('--model_name', type=str, default="bag_of_words", choices=["bag_of_words", "tf-idf"])
+    parser.add_argument('--model_name', type=str, default="bag_of_words", choices=["bag_of_words", "tf_idf"])
     parser.add_argument('--dataset_name', type=str, default="sst2")
     args = parser.parse_args()
 
