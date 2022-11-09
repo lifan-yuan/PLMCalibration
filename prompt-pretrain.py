@@ -130,10 +130,10 @@ def main(args):
         allprobs.extend([max(prob.cpu().tolist()) for prob in probs])
         allpreds.extend(torch.argmax(logits, dim=-1).cpu().tolist())
 
-    os.makedirs(f"./results/pretraining/{dataset_name}/{model_name}-{mode}", exist_ok=True)
-    np.save(f"./results/pretraining/{dataset_name}/{model_name}-{mode}/alllabels.npy", alllabels)
-    np.save(f"./results/pretraining/{dataset_name}/{model_name}-{mode}/allprobs.npy", allprobs)
-    np.save(f"./results/pretraining/{dataset_name}/{model_name}-{mode}/allpreds.npy", allpreds)
+    os.makedirs(f"./results/pretrain/{dataset_name}/{model_name}-{mode}", exist_ok=True)
+    np.save(f"./results/pretrain/{dataset_name}/{model_name}-{mode}/alllabels.npy", alllabels)
+    np.save(f"./results/pretrain/{dataset_name}/{model_name}-{mode}/allprobs.npy", allprobs)
+    np.save(f"./results/pretrain/{dataset_name}/{model_name}-{mode}/allpreds.npy", allpreds)
 
     acc = sum([int(i==j) for i,j in zip(allpreds, alllabels)])/len(allpreds)
     print('acc:', acc)

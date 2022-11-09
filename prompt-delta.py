@@ -158,7 +158,7 @@ if __name__ == "__main__":
     parser.add_argument('--model_name', type=str, default="roberta")
     parser.add_argument('--dataset_name', type=str, default="sst2")
     parser.add_argument('--method', type=str, default="adapter", choices=["adapter", "soft_prompt"])
-    arser.add_argument('--parameter', type=int, default=0)
+    parser.add_argument('--parameter', type=int, default=0)
     
     args = parser.parse_args()
     
@@ -176,9 +176,9 @@ if __name__ == "__main__":
     dataset['test'] = processer.get_test_examples(args.dataset_path)
 
 
-    if method == "adapter":
+    if args.method == "adapter":
         args.bottleneck_dim = args.parameter
-    elif method == "soft_prompt":
+    elif args.method == "soft_prompt":
         args.soft_token_num = args.parameter
     
     for i in range(args.repeats):
