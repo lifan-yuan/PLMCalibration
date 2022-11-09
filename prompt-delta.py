@@ -27,8 +27,8 @@ PROCESSER = {
 }
 
 MODEL_PATH = {
-    "t5": "./model_cache/t5-base",
-    "roberta": "./model_cache/roberta-base",
+    "t5": "t5-base",
+    "roberta": "roberta-base",
 }
 
 DATASET_PATH = {

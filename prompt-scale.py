@@ -23,16 +23,16 @@ PROCESSER = {
 }
 
 MODEL_PATH = {
-    "t5-small": "./model_cache/t5-small",
-    "t5-base": "./model_cache/t5-base",
-    "t5-large": "./model_cache/t5-large",
-    "t5-3b": "./model_cache/t5-3b",
-    "bert-tiny": "./model_cache/bert-tiny",
-    "bert-mini": "./model_cache/bert-mini",
-    "bert-small": "./model_cache/bert-small",
-    "bert-medium": "./model_cache/bert-medium",
-    "bert-base": "./model_cache/bert-base",
-    "bert-large": "./model_cache/bert-large",
+    "t5-small": "t5-small",
+    "t5-base": "t5-base",
+    "t5-large": "t5-large",
+    "t5-3b": "t5-3b",
+    "bert-tiny": "bert-tiny",
+    "bert-mini": "bert-mini",
+    "bert-small": "bert-small",
+    "bert-medium": "bert-medium",
+    "bert-base": "bert-base",
+    "bert-large": "bert-large",
 
 }
 

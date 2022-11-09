@@ -39,8 +39,8 @@ EDA_PROCESSER = {
 }
 
 MODEL_PATH = {
-    "t5": "./model_cache/t5-base",
-    "roberta": "./model_cache/roberta-base",
+    "t5": "t5-base",
+    "roberta": "roberta-base",
 }
 
 DATASET_PATH = {
@@ -234,7 +234,7 @@ def eval(prompt_model, train_dataloader, devset, dev_dataloader, processer, data
     # evaluate calibration of learnable methods
     # load the calibrater and re-wrap the dataloader
     if method == "E-MLP":
-        path = f"./model_cache/ood_{dataset_name}/{model_name}/E-MLP/{seed}"
+        path = f"ood_{dataset_name}/{model_name}/E-MLP/{seed}"
         if os.path.exists(path):
             print("Load the calibrater")
             dim = np.load(os.path.join(path, "dim.npy"))
@@ -256,9 +256,9 @@ def eval(prompt_model, train_dataloader, devset, dev_dataloader, processer, data
     else:
 
         if method == "I-PLM":
-            path = f"./model_cache/ood_{dataset_name}/{model_name}/E-PLM/{seed}"
+            path = f"ood_{dataset_name}/{model_name}/E-PLM/{seed}"
         else:
-            path = f"./model_cache/ood_{dataset_name}/{model_name}/{method}/{seed}"
+            path = f"ood_{dataset_name}/{model_name}/{method}/{seed}"
 
         if os.path.exists(path):
             print(f"Load the classifier from {path}")
@@ -358,9 +358,9 @@ def main(args):
 
     plm, tokenizer, model_config, WrapperClass = load_plm(model_name.split("-")[0], model_path)
 
-    ood_model_path = f"./model_cache/ood_{dataset_name}/{model_name}/{method}/{seed}" \
+    ood_model_path = f"ood_{dataset_name}/{model_name}/{method}/{seed}" \
                         if method in ["label_smoothing", "ensemble", "eda"] \
-                        else f"./model_cache/ood_{dataset_name}/{model_name}/Vanilla/{seed}"
+                        else f"ood_{dataset_name}/{model_name}/Vanilla/{seed}"
                         
     if os.path.exists(ood_model_path):
         print("Load plm from cache")
