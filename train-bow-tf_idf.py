@@ -16,7 +16,7 @@ PROCESSER = {
 DATASET_PATH = {
     "sst2": "./datasets/TextClassification/SST-2",
     "mnli": "./datasets/TextClassification/mnli",
-    "ag": "./datasets/TextClassification/agnews",
+    "agnews": "./datasets/TextClassification/agnews",
     "yahoo_answers_topics": "./datasets/TextClassification/yahoo_answers_topics",
 }
 
