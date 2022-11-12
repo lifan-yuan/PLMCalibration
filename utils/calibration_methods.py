@@ -519,13 +519,6 @@ def temperature_scaling(dev_dataloader, prompt_model):
     
     print(f"{best_temp=}")
 
-    # import matplotlib.pyplot as plt
-    # plt.plot(range(max_iter), T_list, color="blue")
-    # plt.plot(T_list, nll_list, color="red")
-    # plt.xlabel("step/T")
-    # plt.ylabel("T/NLL")
-    # plt.savefig("nll.png")
-
     prompt_model.train()
 
     return best_temp
@@ -552,140 +545,12 @@ class LabelSmoothingLoss(nn.Module):
 
 
 
-
-def cos_dist(x, y):
-    ## cosine distance function
-    cos = nn.CosineSimilarity(dim=1, eps=1e-6)
-    batch_size = x.size(0)
-    c = torch.clamp(1 - cos(x.view(batch_size, -1), y.view(batch_size, -1)),
-                    min=0)
-    return c.mean()
-
-
-# def get_input_embeddings(model, input_ids):
-#     if isinstance(model.prompt_model.plm, T5ForConditionalGeneration):
-#         return model.prompt_model.plm.shared(input_ids)
-#     elif isinstance(model.prompt_model.plm, RobertaForSequenceClassification):
-#         return model.prompt_model.plm.roberta.embedding(input_ids)
-
-class on_manifold_samples():
-    def __init__(self, epsilon_x=1e-4, epsilon_y=0.1):
-        super(on_manifold_samples, self).__init__()
-        self.epsilon_x = epsilon_x
-        self.epsilon_y = epsilon_y
-    
-
-    def generate(self, prompt_model, inputs, y):
-        prompt_model.eval()
-        print(inputs.keys())
-        with torch.no_grad():
-            embedding = prompt_model.prompt_model.plm.get_input_embeddings()(inputs["input_ids"])
-        x = embedding.detach()
-
-        inv_index = torch.arange(x.size(0) - 1, -1, -1).long()
-        x_tilde = x[inv_index, :].detach()
-        y_tilde = y[inv_index, :]
-
-        x_init = x.detach() + torch.zeros_like(x).uniform_(-self.epsilon_x, self.epsilon_x)
-        x_init.requires_grad_(True)
-        # x_init.grad.zero_()
-        
-        if x_init.grad is not None:
-            x_init.grad.data.fill_(0)
-        
-        print(inputs)
-        # inputs.pop("input_ids", None)
-        print(inputs.keys())
-        inputs["inputs_embeds"] = x_init.copy()
-        print(inputs.keys())
-        print(prompt_model(inputs).shape)
-        fea_b = prompt_model(inputs)[1][-1]
-        fea_b = torch.mean(fea_b, 1)
-        with torch.no_grad():
-            inputs["inputs_embeds"] = x_tilde.copy()
-            fea_t = prompt_model(inputs)[1][-1]
-            fea_t = torch.mean(fea_t, 1)
-
-        Dx = cos_dist(fea_b, fea_t)
-        prompt_model.prompt_model.zero_grad()
-        # if torch.cuda.device_count() > 1:
-        #     Dx = Dx.mean()
-        Dx.backward()
-
-        x_prime = x_init.data - self.epsilon_x * torch.sign(x_init.grad.data)
-        x_prime = torch.min(torch.max(x_prime, embedding - self.epsilon_x), embedding + self.epsilon_x)
-
-        y_prime = (1 - self.epsilon_y) * y + self.epsilon_y * y_tilde
-        prompt_model.train()
-        return x_prime.detach(), y_prime.detach()
-
-
-class off_manifold_samples(object):
-    def __init__(self, eps=0.001, rand_init='n'):
-        super(off_manifold_samples, self).__init__()
-        self.eps = eps
-        self.rand_init = rand_init
-    
-    
-    def generate(self, prmpt_model, inputs):
-        prompt_model.eval()
-        ny = inputs["labels"]
-        with torch.no_grad():
-            embedding = prompt_model.prompt_model.plm.get_input_embeddings()(inputs["input_ids"])
-        
-        input_embedding = embedding.detach()
-        #random init the adv samples
-        if self.rand_init == 'y':
-            input_embedding = input_embedding + torch.zeros_like(input_embedding).uniform_(-self.eps, self.eps)
-        input_embedding.requires_grad = True
-        
-        # zero_gradients(input_embedding)
-        input_embedding.zero_grad()
-        if input_embedding.grad is not None:
-            input_embedding.grad.data.fill_(0)
-
-        del inputs["input_ids"]
-        inputs["inputs_embeds"] = input_embedding.copy()
-        cost = prmpt_model(inputs)[0]
-        # if torch.cuda.device_count() > 1:
-        #     cost = cost.mean()
-        prompt_model.prompt_model.zero_grad()
-        cost.backward()
-        off_samples = input_embedding + self.eps*torch.sign(input_embedding.grad.data)
-        off_samples = torch.min(torch.max(off_samples, embedding - self.eps), embedding + self.eps)
-
-        prompt_model.train()
-        return off_samples.detach()
-
-
-class softCrossEntropy(nn.Module):
-    def __init__(self, reduce=True):
-        super(softCrossEntropy, self).__init__()
-        self.reduce = reduce
-        return
-
-    def forward(self, inputs, target):
-        """
-        :param inputs: predictions
-        :param target: target labels in vector form
-        :return: loss
-        """
-        log_likelihood = -F.log_softmax(inputs, dim=1)
-        sample_num, class_num = target.shape
-        if self.reduce:
-            loss = torch.sum(torch.mul(log_likelihood, target)) / sample_num
-        else:
-            loss = torch.sum(torch.mul(log_likelihood, target), 1)
-
-        return loss
-
-
-
 # Easy data augmentation techniques for text classification
 # Jason Wei and Kai Zou
 import os
 import csv
 from openprompt.data_utils.utils import InputExample
+
 
 class EDASST2Processor():
 
@@ -703,7 +568,12 @@ class EDASST2Processor():
             if not np.isnan(item[1]):
                 text_a = item[0].strip()
                 label = item[1]
-                augmented_sentences = eda(text_a)
+                try:
+                    if not str(label).isdigit():
+                        continue
+                    augmented_sentences = eda(text_a)
+                except:
+                    continue
                 for idx2, aug_sent in enumerate(augmented_sentences):
                     guid = f"{split}-{idx1}-{idx2}"
                     example = InputExample(guid=guid, text_a=aug_sent, label=int(label))
@@ -726,9 +596,13 @@ class EDAMnliProcessor():
         with open(path, encoding='utf8') as f:
             reader = csv.reader(f, delimiter=',')
             for idx1, row in enumerate(reader):
-
                 label, premise, hypothesis = row
-                augmented_sentences = eda(hypothesis)
+                try:
+                    if not str(label).isdigit():
+                        continue
+                    augmented_sentences = eda(hypothesis)
+                except:
+                    continue
                 for idx2, aug_sent in enumerate(augmented_sentences):
                     guid = f"{split}-{idx1}-{idx2}"
                     text_a = premise.replace('\\', ' ')
@@ -753,14 +627,19 @@ class EDAAmazonFoodProcessor():
         data = pd.read_csv(path, sep='\t').values.tolist()
         examples = []
         for idx1, item in enumerate(data):
-            if not np.isnan(item[1]):
-                text_a = item[0].strip()
-                label = item[1]
+            text_a = item[0].strip()
+            label = item[1]
+            try:
+                if not str(label).isdigit():
+                    continue
                 augmented_sentences = eda(text_a)
-                for idx2, aug_sent in enumerate(augmented_sentences):
-                    guid = f"{split}-{idx1}-{idx2}"
-                    example = InputExample(guid=guid, text_a=aug_sent, label=int(label))
-                    examples.append(example)
+            except:
+                print(text_a)
+                continue
+            for idx2, aug_sent in enumerate(augmented_sentences):
+                guid = f"{split}-{idx1}-{idx2}"
+                example = InputExample(guid=guid, text_a=aug_sent, label=int(label))
+                examples.append(example)
         return examples
 
 
@@ -777,14 +656,19 @@ class EDACivilCommentsProcessor():
         data = pd.read_csv(path, sep='\t').values.tolist()
         examples = []
         for idx1, item in enumerate(data):
-            if not np.isnan(item[1]):
-                text_a = item[0].strip()
-                label = item[1]
+            text_a = item[0].strip()
+            label = item[1]
+            try:
+                if not str(label).isdigit():
+                    continue
                 augmented_sentences = eda(text_a)
-                for idx2, aug_sent in enumerate(augmented_sentences):
-                    guid = f"{split}-{idx1}-{idx2}"
-                    example = InputExample(guid=guid, text_a=aug_sent, label=int(label))
-                    examples.append(example)
+            except:
+                print(text_a)
+                continue
+            for idx2, aug_sent in enumerate(augmented_sentences):
+                guid = f"{split}-{idx1}-{idx2}"
+                example = InputExample(guid=guid, text_a=aug_sent, label=int(label))
+                examples.append(example)
                 
         return examples
 
@@ -807,17 +691,20 @@ class EDAYahooProcessor():
                 text_a = ' '.join([question_title.replace('\\n', ' ').replace('\\', ' '),
                                    question_body.replace('\\n', ' ').replace('\\', ' ')])
                 text_b = answer.replace('\\n', ' ').replace('\\', ' ')
-                if np.isnan(label):
+                
+                try:
+                    if not str(label).isdigit():
+                        continue
+                    augmented_sentences = eda(text_a)
+                except:
+                    print(text_a)
+                    print(label)
                     continue
-                augmented_sentences = eda(text_a)
                 for idx2, aug_sent in enumerate(augmented_sentences):
                     guid = f"{split}-{idx1}-{idx2}"
                     example = InputExample(guid=guid, text_a=aug_sent, text_b=text_b, label=int(label))
                     examples.append(example)
-                    
-                example = InputExample(guid=str(idx), text_a=text_a, text_b=text_b, label=int(label))
-
-                examples.append(example)
+        
         return examples
 
 

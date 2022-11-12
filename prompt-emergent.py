@@ -1,8 +1,6 @@
 import argparse
 import math
 import os
-# In this scripts, you will laern how to do calibartion and zero-shot learning
-# We use manual verbalizer and knowledgeable verbalizer as examples.
 from tqdm import tqdm
 from openprompt.data_utils.text_classification_dataset import *
 from openprompt.data_utils.fewglue_dataset import RteProcessor
@@ -18,7 +16,7 @@ from openprompt import PromptDataLoader
 from transformers import T5ForConditionalGeneration, AutoModelForSequenceClassification
 import torch.nn as nn
 import torch.nn.functional as F
-from calibration_methods import *
+from utils.calibration_methods import *
 
 PROCESSER = {
     "sst2": SST2Processor,
@@ -39,8 +37,10 @@ EDA_PROCESSER = {
 }
 
 MODEL_PATH = {
-    "t5": "t5-base",
-    "roberta": "roberta-base",
+    "t5-small": "t5-small",
+    "t5-base": "t5-base",
+    "t5-large": "t5-large"
+    
 }
 
 DATASET_PATH = {
@@ -71,7 +71,7 @@ def set_seed(seed):
     torch.cuda.manual_seed_all(seed)
     np.random.seed(seed)
     random.seed(seed)
-          
+
 
 def evaluation(test_dataloader, prompt_model, dataset_name, model_name, ood_name, method, seed):
 
@@ -95,7 +95,7 @@ def evaluation(test_dataloader, prompt_model, dataset_name, model_name, ood_name
             alllabels.extend(labels.cpu().tolist())
             if "calibration" not in method:
                 allprobs.extend([prob.max().item() for prob in probs])
-            else: # the prob of "True"
+            else:
                 allprobs.extend([prob[1].item() for prob in probs])
             allpreds.extend(torch.argmax(logits, dim=-1).cpu().tolist())
     except:
@@ -112,6 +112,8 @@ def evaluation(test_dataloader, prompt_model, dataset_name, model_name, ood_name
             allpreds.extend(torch.argmax(logits, dim=-1).cpu().tolist())
             alllabels.extend(labels)
 
+    prompt_model.train()
+
     # record
     os.makedirs(f"./results/ood/{dataset_name}/{model_name}/{method}/{ood_name}/{seed}", exist_ok=True)
     np.save(f"./results/ood/{dataset_name}/{model_name}/{method}/{ood_name}/{seed}/alllabels.npy", alllabels)
@@ -119,57 +121,7 @@ def evaluation(test_dataloader, prompt_model, dataset_name, model_name, ood_name
     np.save(f"./results/ood/{dataset_name}/{model_name}/{method}/{ood_name}/{seed}/allpreds.npy", allpreds)
     acc = sum([int(i==j) for i,j in zip(allpreds, alllabels)])/len(allpreds)
     print('acc on {}: {}'.format(ood_name, acc))
-
-    prompt_model.train()
-
     return acc
-
-
-def compute_entropy(test_dataloader, prompt_model, dataset_name, model_name, ood_name, method, seed):
-
-    prompt_model.eval()
-
-    allprobs = []
-    allentropy = []
-    global T
-    T = torch.tensor(T).cuda() if method == "temperature_scaling" else 1
-
-    try:
-        for step, inputs in enumerate(test_dataloader):
-            inputs = inputs.cuda()
-            logits = prompt_model(inputs)
-            probs = F.softmax(logits / T, dim=-1)
-            entropy = -probs.mul(probs.detach().clone().log()).sum(dim=-1).flatten()
-            allentropy.extend(entropy.tolist())
-            if "calibration" not in method:
-                allprobs.extend([prob.max().item() for prob in probs])
-            else: # the prob of "True"
-                allprobs.extend([prob[1].item() for prob in probs])
-    except:
-        for step, batch in enumerate(test_dataloader):
-            inputs, labels = batch
-            logits = prompt_model(torch.tensor(inputs).cuda())
-            probs = F.softmax(logits, dim=-1)
-            entropy = -probs.mul(probs.detach().clone().log()).sum(dim=-1).flatten()
-            allentropy.extend(entropy.tolist())
-            if "calibration" not in method:
-                allprobs.extend([prob.max().item() for prob in probs])
-            else:
-                allprobs.extend([prob[1].item() for prob in probs])
-
-    prompt_model.train()
-
-    # record
-    os.makedirs(f"./results/ood/{dataset_name}/{model_name}/{method}/{ood_name}/{seed}", exist_ok=True)
-    np.save(f"./results/ood/{dataset_name}/{model_name}/{method}/{ood_name}/{seed}/allprobs.npy", allprobs)
-    np.save(f"./results/ood/{dataset_name}/{model_name}/{method}/{ood_name}/{seed}/allentropy.npy", allentropy)
-
-    avg_entropy = np.mean(allentropy)
-    print('entropy on {}: {}'.format(ood_name, avg_entropy))
-
-    
-
-
 
 
 def eval(prompt_model, train_dataloader, devset, dev_dataloader, processer, dataset_path, ood_dataset_path, mytemplate, tokenizer, WrapperClass, dataset_name, model_name, method, seed):
@@ -179,7 +131,7 @@ def eval(prompt_model, train_dataloader, devset, dev_dataloader, processer, data
         "mnli": ["snli", "hans", "anli"],
         "amazon_food": ["sst5", "semeval"],
         "civil_comments": ["hate_speech", "implicit_hate"],
-        "sst2": ["bookcorpus", "random_words"],
+        "sst2": ["wikitext", "random_words"],
         "dynasent": ["dsc", "amazon_food"],
         "yahoo_answers_topics": ["bookcorpus", "random_words"]
     }
@@ -191,6 +143,13 @@ def eval(prompt_model, train_dataloader, devset, dev_dataloader, processer, data
             dataset[ood_name] = processer.get_examples(ood_dataset_path, ood_name)
         else:
             dataset[ood_name] = WikiProcessor().get_examples(f"./datasets/TextClassification/{ood_name}", ood_name)
+
+
+    # print(f"{model_name=}")
+    # print(f"./results/ood/{dataset_name}/{model_name}/{method}/{ood_name}/{seed}")
+    # exit()
+
+
 
     dataloader_dict = {}
     for ood_name in dataset.keys(): # including the test split
@@ -234,7 +193,7 @@ def eval(prompt_model, train_dataloader, devset, dev_dataloader, processer, data
     # evaluate calibration of learnable methods
     # load the calibrater and re-wrap the dataloader
     if method == "E-MLP":
-        path = f"ood_{dataset_name}/{model_name}/E-MLP/{seed}"
+        path = f"./model_cache/ood_{dataset_name}/{model_name}/E-MLP/{seed}"
         if os.path.exists(path):
             print("Load the calibrater")
             dim = np.load(os.path.join(path, "dim.npy"))
@@ -256,9 +215,9 @@ def eval(prompt_model, train_dataloader, devset, dev_dataloader, processer, data
     else:
 
         if method == "I-PLM":
-            path = f"ood_{dataset_name}/{model_name}/E-PLM/{seed}"
+            path = f"./model_cache/ood_{dataset_name}/{model_name}/E-PLM/{seed}"
         else:
-            path = f"ood_{dataset_name}/{model_name}/{method}/{seed}"
+            path = f"./model_cache/ood_{dataset_name}/{model_name}/{method}/{seed}"
 
         if os.path.exists(path):
             print(f"Load the classifier from {path}")
@@ -284,7 +243,9 @@ def eval(prompt_model, train_dataloader, devset, dev_dataloader, processer, data
                 trainer(prompt_model, train_dataloader, dev_dataloader, devset, dataset_name, tokenizer, WrapperClass)   
             plm = classifier.plm ### this line is important, to record the tuned backbone model
             classifier.plm.save_pretrained(path)
-            _, _, model_config, _ = load_plm(model_name.split("-")[0], MODEL_PATH[model_name])
+            
+            model_scale = "-".join([model_name.split("-")[0], model_name.split("-")[1]])
+            _, _, model_config, _ = load_plm(model_name.split("-")[0], MODEL_PATH[model_scale])
             model_config.save_pretrained(path)
             tokenizer.save_pretrained(path)
             if method == "E-PLM": # use the original prompt_model as answer-provider
@@ -342,6 +303,8 @@ def main(args):
     model_name = args.model_name
     model_path = args.model_path
     dataset_name = args.dataset_name
+    scale = args.scale
+    dev_size = args.dev_size
     dataset_path = args.dataset_path
     method = args.method
     seed = args.seed
@@ -350,7 +313,7 @@ def main(args):
 
     dataset = {}
 
-    processer = PROCESSER[dataset_name]() if method != "eda" else EDA_PROCESSER[dataset_name]()
+    processer = PROCESSER[dataset_name]()
     dataset['train'] = processer.get_examples(dataset_path, "train")
     print(dataset_name)
     print(len(dataset['train']))
@@ -358,9 +321,13 @@ def main(args):
 
     plm, tokenizer, model_config, WrapperClass = load_plm(model_name.split("-")[0], model_path)
 
-    ood_model_path = f"ood_{dataset_name}/{model_name}/{method}/{seed}" \
+    if "-base" in model_name:
+        model_scale = model_name.split("-")[0]
+    else:
+        model_scale = "-".join([model_name.split("-")[0], model_name.split("-")[1]])
+    ood_model_path = f"./model_cache/ood_{dataset_name}/{model_scale}/{method}/{seed}" \
                         if method in ["label_smoothing", "ensemble", "eda"] \
-                        else f"ood_{dataset_name}/{model_name}/Vanilla/{seed}"
+                        else f"./model_cache/ood_{dataset_name}/{model_scale}/Vanilla/{seed}"
                         
     if os.path.exists(ood_model_path):
         print("Load plm from cache")
@@ -372,7 +339,8 @@ def main(args):
     mytemplate = ManualTemplate(tokenizer=tokenizer).from_file(f"scripts/TextClassification/{dataset_name}/manual_template.txt", choice=0)
     myverbalizer = ManualVerbalizer(tokenizer, num_classes=num_classes).from_file(f"scripts/TextClassification/{dataset_name}/manual_verbalizer.txt")
     prompt_model = PromptForClassification(plm=plm,template=mytemplate, verbalizer=myverbalizer, freeze_plm=False).cuda()
-
+    if scale == "large":
+        prompt_model.parallelize()
 
     train_dataloader = PromptDataLoader(dataset=dataset["train"], template=mytemplate, tokenizer=tokenizer,
                 tokenizer_wrapper_class=WrapperClass, max_seq_length=256, decoder_max_length=3,
@@ -391,6 +359,9 @@ def main(args):
         optimizer = torch.optim.AdamW(optimizer_grouped_parameters, lr=1e-5)
 
         loss_func = torch.nn.CrossEntropyLoss() if method != "label_smoothing" else LabelSmoothingLoss(num_classes)
+        
+        prompt_model.train()
+
         for epoch in range(10):
             tot_loss = 0
             for step, inputs in enumerate(train_dataloader):
@@ -408,7 +379,6 @@ def main(args):
         print("save model")
         print("finish training")
     
-
     dev_file = "dev" if dev_size == "large" else f"dev_{dev_size}"
     dataset["dev"] = processer.get_examples(dataset_path, dev_file)
     dev_dataloader = PromptDataLoader(dataset=dataset["dev"], template=mytemplate, tokenizer=tokenizer,
@@ -433,12 +403,14 @@ def main(args):
 
     
 
+
+
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument('--repeats', type=int, default=1)
     parser.add_argument('--model_name', type=str, default="t5")
     parser.add_argument('--dataset_name', type=str, default="amazon_food")
-    parser.add_argument('--dev_size', type=str, default="large", choices=["small", "medium", "large"])
+    parser.add_argument('--dev_size', type=str, default="large", choices=["small", "middle", "large"])
     parser.add_argument('--scale', type=str, default="base", choices=["small", "base", "large"])
     parser.add_argument('--method', type=str, default="Vanilla", 
                         choices=["Vanilla", "label_smoothing", "ls","temperature_scaling", "ts", "ensemble", "eda",
@@ -453,14 +425,25 @@ if __name__ == "__main__":
     if args.method == "ts":
         args.method = "temperature_scaling"
 
+
+    args.model_name = args.model_name + f"-{args.scale}"
     args.model_path = MODEL_PATH[args.model_name]
+
+    args.model_name = args.model_name + f"-{args.dev_size}"
     args.dataset_path = DATASET_PATH[args.dataset_name]
+
     args.num_classes = NUM_CLASSES[args.dataset_name]
 
     T = 0
     if args.method == "ensemble":
         args.repeats = 5
 
+    id_acc_list = []
+    id_ECE_list = []
+    id_prob_distribution = []
+    ood_acc_list = []
+    ood_ECE_list = []
+    ood_prob_distribution = []
     for i in range(args.repeats):
         set_seed(i)
         args.seed = i

@@ -61,6 +61,9 @@ if __name__ == "__main__":
     parser.add_argument('--dataset_name', type=str, default="sst2")
     args = parser.parse_args()
 
+    if args.dataset_name == "yahoo":
+        args.dataset_name = "yahoo_answers_topics"
+        
     dataset_name = args.dataset_name
     model_name = args.model_name
 

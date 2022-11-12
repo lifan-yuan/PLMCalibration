@@ -1,8 +1,6 @@
 import argparse
 import math
 import os
-# In this scripts, you will laern how to do calibartion and zero-shot learning
-# We use manual verbalizer and knowledgeable verbalizer as examples.
 from tqdm import tqdm
 from openprompt.data_utils.text_classification_dataset import *
 from openprompt.data_utils.fewglue_dataset import RteProcessor
@@ -347,8 +345,12 @@ def main(args):
 
     dataset = {}
 
-    processer = PROCESSER[dataset_name]() if method != "eda" else EDA_PROCESSER[dataset_name]()
-    dataset['train'] = processer.get_examples(dataset_path, "train")
+    processer = PROCESSER[dataset_name]()
+    if method != "eda":
+        dataset['train'] = processer.get_examples(dataset_path, "train")
+    else:
+        eda_processer = EDA_PROCESSER[dataset_name]()
+        dataset['train'] = eda_processer.get_examples(dataset_path, "train")
     print(dataset_name)
     print(len(dataset['train']))
 
