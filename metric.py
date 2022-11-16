@@ -129,12 +129,12 @@ def compute_ece(allprobs_list, allpreds_list, alllabels_list):
 
     # ece_equal_mass
     for key in range(2):
-        print(f"ECE_equal_mass on subsets [{key}]:", avg_ECE_equal_mass_subset, std_ECE_equal_mass_subset)
+        print(f"ECE_equal_mass on subsets [{key}]:", avg_ECE_equal_mass_subset[key], std_ECE_equal_mass_subset[key])
     print("ECE_equal_mass: ", avg_ECE_equal_mass, std_ECE_equal_mass)
 
     # ece_equal_interval
     for key in range(2):
-        print(f"ECE_equal_interval on subsets [{key}]:", avg_ECE_equal_interval_subset, std_ECE_equal_interval_subset)
+        print(f"ECE_equal_interval on subsets [{key}]:", avg_ECE_equal_interval_subset[key], std_ECE_equal_interval_subset[key])
     print("ECE_equal_interval: ", avg_ECE_equal_interval, std_ECE_equal_interval)
 
 
@@ -253,19 +253,16 @@ def ood():
 
     for ood_name in OOD_DATASET[dataset_name]:
         for method in method_list:
-            if method in ["E-MLP", "E-PLM", "I-PLM", "I-iterative", "I-multitask"]:
-                method_no_suffix = method
-                method = method + "-calibration"
             seeds = 1 if method != "ensemble" else 5
             alllabels_list = []
             allprobs_list = []
             allpreds_list = []
             for seed in range(seeds):
 
-                if "-calibration" in method:
-                    allprobs = np.load(f"./results/ood/{dataset_name}/{model_name}/{method}/{ood_name}/{seed}/allprobs.npy").tolist()
-                    allpreds = np.load(f"./results/ood/{dataset_name}/{model_name}/{method_no_suffix}/{ood_name}/{seed}/allpreds.npy").tolist()
-                    alllabels = np.load(f"./results/ood/{dataset_name}/{model_name}/{method_no_suffix}/{ood_name}/{seed}/alllabels.npy").tolist()
+                if method in ["E-MLP", "E-PLM", "I-PLM", "I-iterative", "I-multitask"]:
+                    allprobs = np.load(f"./results/ood/{dataset_name}/{model_name}/{method}-calibration/{ood_name}/{seed}/allprobs.npy").tolist()
+                    allpreds = np.load(f"./results/ood/{dataset_name}/{model_name}/{method}/{ood_name}/{seed}/allpreds.npy").tolist()
+                    alllabels = np.load(f"./results/ood/{dataset_name}/{model_name}/{method}/{ood_name}/{seed}/alllabels.npy").tolist()
                 else:
                     allprobs = np.load(f"./results/ood/{dataset_name}/{model_name}/{method}/{ood_name}/{seed}/allprobs.npy").tolist()
                     allpreds = np.load(f"./results/ood/{dataset_name}/{model_name}/{method}/{ood_name}/{seed}/allpreds.npy").tolist()
@@ -277,29 +274,6 @@ def ood():
 
             compute_ece(allprobs_list, allpreds_list, alllabels_list)
 
-            method = method.strip("-calibration")
-            if method in ["E-MLP", "E-PLM", "I-PLM", "I-iterative", "I-multitask"]:
-                if dataset_name == "dynasent":
-                    continue
-                acc_list = []
-                for seed in range(seeds):
-                    acc = np.load(f"./results/metrics/ood/{dataset_name}/accuracy_of_{method}/{model_name}/{ood_name}-{seed}.npy")
-                    acc_list.append(acc.item())
-                avg_acc = np.mean(acc_list)
-                print("Ignore the above acc. It actually should be:", avg_acc)
-                print("\n"*3)
-
-                # re-write the acc
-                with open(f"./metrics/ood/{dataset_name}/{model_name}.tsv", "r") as f:
-                    data = []
-                    lines = f.readlines()
-                    for line in lines:
-                        line = line.strip().split("\t")
-                        data.append(line)
-                    data[-1][0] = str(avg_acc)
-                with open(f"./metrics/ood/{dataset_name}/{model_name}.tsv", "w") as f:
-                    for line in data:
-                        print("\t".join(line), file=f)
 
 
 def entropy():

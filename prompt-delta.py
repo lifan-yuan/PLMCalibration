@@ -45,6 +45,11 @@ NUM_CLASSES = {
     "yahoo_answers_topics": 10,
 }
 
+LR = {
+    "adapter": 1e-5,
+    "soft": 5e-3
+}
+
 
 
 import random
@@ -74,7 +79,7 @@ def main(args):
         delta_model = AdapterModel(backbone_model=plm, bottleneck_dim=parameter)
         mytemplate = ManualTemplate(tokenizer=tokenizer).from_file(f"scripts/TextClassification/{dataset_name}/manual_template.txt", choice=0)
         myverbalizer = ManualVerbalizer(tokenizer, num_classes=num_classes).from_file(f"scripts/TextClassification/{dataset_name}/manual_verbalizer.txt")
-    elif method == "soft_prompt":
+    elif method == "soft":
         delta_model = SoftPromptModel(backbone_model=plm, soft_token_num=parameter)
         mytemplate = SoftTemplate(model=plm, tokenizer=tokenizer, num_tokens=parameter).from_file(f"scripts/TextClassification/{dataset_name}/soft_template.txt", choice=0)
         myverbalizer = ManualVerbalizer(tokenizer, num_classes=num_classes).from_file(f"scripts/TextClassification/{dataset_name}/manual_verbalizer.txt")
@@ -103,7 +108,7 @@ def main(args):
         {'params': [p for n, p in prompt_model.named_parameters() if any(nd in n for nd in no_decay)], 'weight_decay': 0.0}
     ]
 
-    optimizer = torch.optim.AdamW(optimizer_grouped_parameters, lr=1e-5)
+    optimizer = torch.optim.AdamW(optimizer_grouped_parameters, lr=LR[method])
 
     prompt_model.train()
 
@@ -142,7 +147,7 @@ def main(args):
         np.save(f"./results/delta-adapter/{dataset_name}/{model_name}/{parameter}-dim/{seed}/alllabels.npy", alllabels)
         np.save(f"./results/delta-adapter/{dataset_name}/{model_name}/{parameter}-dim/{seed}/allprobs.npy", allprobs)
         np.save(f"./results/delta-adapter/{dataset_name}/{model_name}/{parameter}-dim/{seed}/allpreds.npy", allpreds)
-    elif method == "soft_prompt":
+    elif method == "soft":
         os.makedirs(f"./results/delta-soft/{dataset_name}/{model_name}/{parameter}-token/{seed}", exist_ok=True)
         np.save(f"./results/delta-soft/{dataset_name}/{model_name}/{parameter}-token/{seed}/alllabels.npy", alllabels)
         np.save(f"./results/delta-soft/{dataset_name}/{model_name}/{parameter}-token/{seed}/allprobs.npy", allprobs)
@@ -157,7 +162,7 @@ if __name__ == "__main__":
     parser.add_argument('--repeats', type=int, default=1)
     parser.add_argument('--model_name', type=str, default="roberta")
     parser.add_argument('--dataset_name', type=str, default="sst2")
-    parser.add_argument('--method', type=str, default="adapter", choices=["adapter", "soft_prompt"])
+    parser.add_argument('--method', type=str, default="adapter", choices=["adapter", "soft"])
     parser.add_argument('--parameter', type=int, default=0)
     
     args = parser.parse_args()
@@ -178,7 +183,7 @@ if __name__ == "__main__":
 
     if args.method == "adapter":
         args.bottleneck_dim = args.parameter
-    elif args.method == "soft_prompt":
+    elif args.method == "soft":
         args.soft_token_num = args.parameter
     
     for i in range(args.repeats):

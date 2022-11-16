@@ -198,19 +198,12 @@ def eval(prompt_model, train_dataloader, devset, dev_dataloader, processer, data
     # evaluate performance
     if method not in ["I-PLM", "I-iterative","I-multitask"]:
         print("Performance:")
-        if dataset_name not in ["sst2", "yahoo_answers_topics"]:
 
-            if method in ["E-MLP", "E-PLM"]:
-                acc_path = f"./results/metrics/ood/{dataset_name}/accuracy_of_{method}/{model_name}"
-                os.makedirs(acc_path, exist_ok=True)
-                                
+        if dataset_name not in ["sst2", "yahoo_answers_topics"]:                                
             for ood_name, test_dataloader in dataloader_dict.items():
                 if ood_name == "test":
                     ood_name = f"{dataset_name}_iid"
-                acc = evaluation(test_dataloader, prompt_model, dataset_name, model_name, ood_name, method, seed)
-                if method in ["E-MLP", "E-PLM"]:
-                    np.save(os.path.join(acc_path, f"{ood_name}-{seed}.npy"), acc)
-
+                evaluation(test_dataloader, prompt_model, dataset_name, model_name, ood_name, method, seed)
         else:
             for ood_name, test_dataloader in dataloader_dict.items():
                 if ood_name == "test":
@@ -229,7 +222,7 @@ def eval(prompt_model, train_dataloader, devset, dev_dataloader, processer, data
     # evaluate calibration of learnable methods
     # load the calibrater and re-wrap the dataloader
     if method == "E-MLP":
-        path = f"ood_{dataset_name}/{model_name}/E-MLP/{seed}"
+        path = f"./model_cache/ood_{dataset_name}/{model_name}/E-MLP/{seed}"
         if os.path.exists(path):
             print("Load the calibrater")
             dim = np.load(os.path.join(path, "dim.npy"))
@@ -251,9 +244,9 @@ def eval(prompt_model, train_dataloader, devset, dev_dataloader, processer, data
     else:
 
         if method == "I-PLM":
-            path = f"ood_{dataset_name}/{model_name}/E-PLM/{seed}"
+            path = f"./model_cache/ood_{dataset_name}/{model_name}/E-PLM/{seed}"
         else:
-            path = f"ood_{dataset_name}/{model_name}/{method}/{seed}"
+            path = f"./model_cache/ood_{dataset_name}/{model_name}/{method}/{seed}"
 
         if os.path.exists(path):
             print(f"Load the classifier from {path}")
@@ -289,13 +282,10 @@ def eval(prompt_model, train_dataloader, devset, dev_dataloader, processer, data
             # evaluate performance using the tuned model
             print("Performance:")
             if dataset_name not in ["sst2", "yahoo_answers_topics"]:
-                acc_path = f"./results/metrics/ood/{dataset_name}/accuracy_of_{method}/{model_name}"
-                os.makedirs(acc_path, exist_ok=True)
                 for ood_name, test_dataloader in dataloader_dict.items(): # original dataloader
                     if ood_name == "test":
                         ood_name = f"{dataset_name}_iid"
-                    acc = evaluation(test_dataloader, classifier, dataset_name, model_name, ood_name, method, seed)
-                    np.save(os.path.join(acc_path, f"{ood_name}-{seed}.npy"), acc)
+                    evaluation(test_dataloader, classifier, dataset_name, model_name, ood_name, method, seed)
             else:
                 for ood_name, test_dataloader in dataloader_dict.items():
                     if ood_name == "test":
@@ -357,9 +347,9 @@ def main(args):
 
     plm, tokenizer, model_config, WrapperClass = load_plm(model_name.split("-")[0], model_path)
 
-    ood_model_path = f"ood_{dataset_name}/{model_name}/{method}/{seed}" \
+    ood_model_path = f"./model_cache/ood_{dataset_name}/{model_name}/{method}/{seed}" \
                         if method in ["label_smoothing", "ensemble", "eda"] \
-                        else f"ood_{dataset_name}/{model_name}/Vanilla/{seed}"
+                        else f"./model_cache/ood_{dataset_name}/{model_name}/Vanilla/{seed}"
                         
     if os.path.exists(ood_model_path):
         print("Load plm from cache")
