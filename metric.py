@@ -254,25 +254,26 @@ def ood():
     for ood_name in OOD_DATASET[dataset_name]:
         for method in method_list:
             seeds = 1 if method != "ensemble" else 5
-            alllabels_list = []
+ 
             allprobs_list = []
             allpreds_list = []
             for seed in range(seeds):
 
                 if method in ["E-MLP", "E-PLM", "I-PLM", "I-iterative", "I-multitask"]:
                     allprobs = np.load(f"./results/ood/{dataset_name}/{model_name}/{method}-calibration/{ood_name}/{seed}/allprobs.npy").tolist()
-                    allpreds = np.load(f"./results/ood/{dataset_name}/{model_name}/{method}/{ood_name}/{seed}/allpreds.npy").tolist()
-                    alllabels = np.load(f"./results/ood/{dataset_name}/{model_name}/{method}/{ood_name}/{seed}/alllabels.npy").tolist()
                 else:
                     allprobs = np.load(f"./results/ood/{dataset_name}/{model_name}/{method}/{ood_name}/{seed}/allprobs.npy").tolist()
-                    allpreds = np.load(f"./results/ood/{dataset_name}/{model_name}/{method}/{ood_name}/{seed}/allpreds.npy").tolist()
-                    alllabels = np.load(f"./results/ood/{dataset_name}/{model_name}/{method}/{ood_name}/{seed}/alllabels.npy").tolist()
+                
+                allpreds = np.load(f"./results/ood/{dataset_name}/{model_name}/{method}/{ood_name}/{seed}/allprobs.npy").tolist() # load the prob (not pred!!!) to compute predictions
+                alllabels = np.load(f"./results/ood/{dataset_name}/{model_name}/{method}/{ood_name}/{seed}/alllabels.npy").tolist() # alllabels remain the same across all seeds
 
-                alllabels_list.append(alllabels)
                 allprobs_list.append(allprobs)
                 allpreds_list.append(allpreds)
 
-            compute_ece(allprobs_list, allpreds_list, alllabels_list)
+            allprobs = np.mean(allprobs_list, axis=0)
+            allpreds = np.mean(allpreds_list, axis=0).argmax(axis=-1)
+
+            compute_ece(allprobs, allpreds, alllabels)
 
 
 
