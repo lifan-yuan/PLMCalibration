@@ -1,6 +1,6 @@
 # PLMCalibration
 
-Code and data for paper "A Close Look into the Calibration of Pre-trained Language Models"
+Code and data for the ACL 2023 paper "A Close Look into the Calibration of Pre-trained Language Models"
 
 
 
